@@ -1,108 +1,338 @@
+--// MODERN MOVEMENT CONTROL PANEL
+--// Place in a LocalScript for your own Roblox experience
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
---// SETTINGS
+--==================================================
+-- SETTINGS
+--==================================================
+
 local noclipEnabled = false
 local infiniteJumpEnabled = false
 local noclipConnection
+local minimized = false
 
---// GUI
+local TWEEN_INFO = TweenInfo.new(
+	0.2,
+	Enum.EasingStyle.Quint,
+	Enum.EasingDirection.Out
+)
+
+--==================================================
+-- COLORS
+--==================================================
+
+local BG = Color3.fromRGB(12, 14, 20)
+local PANEL = Color3.fromRGB(20, 23, 32)
+local BUTTON = Color3.fromRGB(29, 33, 45)
+local TEXT = Color3.fromRGB(245, 247, 255)
+local SUBTEXT = Color3.fromRGB(135, 142, 160)
+
+local GREEN = Color3.fromRGB(45, 220, 125)
+local BLUE = Color3.fromRGB(70, 145, 255)
+local RED = Color3.fromRGB(235, 70, 85)
+
+--==================================================
+-- SCREEN GUI
+--==================================================
+
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MovementUI"
+screenGui.Name = "MovementControlPanel"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
 screenGui.Parent = playerGui
 
-local frame = Instance.new("Frame")
-frame.Name = "MainFrame"
-frame.Size = UDim2.fromOffset(260, 205)
-frame.Position = UDim2.new(0.5, -130, 0.5, -102)
-frame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
-frame.BorderSizePixel = 0
-frame.Parent = screenGui
+--==================================================
+-- MAIN PANEL
+--==================================================
 
-local frameCorner = Instance.new("UICorner")
-frameCorner.CornerRadius = UDim.new(0, 16)
-frameCorner.Parent = frame
+local main = Instance.new("Frame")
+main.Name = "Main"
+main.Size = UDim2.fromOffset(340, 280)
+main.Position = UDim2.new(0.5, -170, 0.5, -140)
+main.BackgroundColor3 = BG
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+main.Parent = screenGui
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(65, 70, 90)
-stroke.Thickness = 1.5
-stroke.Transparency = 0.3
-stroke.Parent = frame
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 20)
+mainCorner.Parent = main
 
---// Title
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(55, 62, 80)
+mainStroke.Thickness = 1.5
+mainStroke.Transparency = 0.25
+mainStroke.Parent = main
+
+--==================================================
+-- TOP ACCENT
+--==================================================
+
+local accent = Instance.new("Frame")
+accent.Size = UDim2.new(1, 0, 0, 3)
+accent.Position = UDim2.fromOffset(0, 0)
+accent.BorderSizePixel = 0
+accent.BackgroundColor3 = BLUE
+accent.Parent = main
+
+local accentGradient = Instance.new("UIGradient")
+accentGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, BLUE),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 80, 255)),
+	ColorSequenceKeypoint.new(1, GREEN)
+})
+accentGradient.Parent = accent
+
+--==================================================
+-- HEADER
+--==================================================
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 65)
+header.BackgroundTransparency = 1
+header.Parent = main
+
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -30, 0, 32)
-title.Position = UDim2.fromOffset(15, 12)
+title.Size = UDim2.new(1, -70, 0, 28)
+title.Position = UDim2.fromOffset(18, 12)
 title.BackgroundTransparency = 1
-title.Text = "Movement"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Text = "MOVEMENT"
+title.TextColor3 = TEXT
 title.Font = Enum.Font.GothamBold
-title.TextSize = 22
+title.TextSize = 20
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = frame
+title.Parent = header
 
 local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -30, 0, 20)
-subtitle.Position = UDim2.fromOffset(15, 40)
+subtitle.Size = UDim2.new(1, -70, 0, 18)
+subtitle.Position = UDim2.fromOffset(19, 38)
 subtitle.BackgroundTransparency = 1
-subtitle.Text = "Movement controls"
-subtitle.TextColor3 = Color3.fromRGB(155, 160, 175)
-subtitle.Font = Enum.Font.Gotham
-subtitle.TextSize = 12
+subtitle.Text = "CONTROL PANEL  •  LOCAL"
+subtitle.TextColor3 = SUBTEXT
+subtitle.Font = Enum.Font.GothamMedium
+subtitle.TextSize = 10
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
-subtitle.Parent = frame
+subtitle.Parent = header
 
---// Function to create buttons
-local function createButton(name, text, yPosition)
+--==================================================
+-- MINIMIZE BUTTON
+--==================================================
+
+local minimize = Instance.new("TextButton")
+minimize.Size = UDim2.fromOffset(34, 34)
+minimize.Position = UDim2.new(1, -48, 0, 15)
+minimize.BackgroundColor3 = BUTTON
+minimize.BorderSizePixel = 0
+minimize.Text = "−"
+minimize.TextColor3 = TEXT
+minimize.Font = Enum.Font.GothamBold
+minimize.TextSize = 22
+minimize.AutoButtonColor = false
+minimize.Parent = header
+
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 10)
+minCorner.Parent = minimize
+
+--==================================================
+-- STATUS
+--==================================================
+
+local statusFrame = Instance.new("Frame")
+statusFrame.Size = UDim2.new(1, -36, 0, 30)
+statusFrame.Position = UDim2.fromOffset(18, 70)
+statusFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 28)
+statusFrame.BorderSizePixel = 0
+statusFrame.Parent = main
+
+local statusCorner = Instance.new("UICorner")
+statusCorner.CornerRadius = UDim.new(0, 9)
+statusCorner.Parent = statusFrame
+
+local statusDot = Instance.new("Frame")
+statusDot.Size = UDim2.fromOffset(8, 8)
+statusDot.Position = UDim2.fromOffset(11, 11)
+statusDot.BackgroundColor3 = GREEN
+statusDot.BorderSizePixel = 0
+statusDot.Parent = statusFrame
+
+local dotCorner = Instance.new("UICorner")
+dotCorner.CornerRadius = UDim.new(1, 0)
+dotCorner.Parent = statusDot
+
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, -35, 1, 0)
+statusText.Position = UDim2.fromOffset(28, 0)
+statusText.BackgroundTransparency = 1
+statusText.Text = "SYSTEM READY"
+statusText.TextColor3 = Color3.fromRGB(180, 190, 205)
+statusText.Font = Enum.Font.GothamBold
+statusText.TextSize = 10
+statusText.TextXAlignment = Enum.TextXAlignment.Left
+statusText.Parent = statusFrame
+
+--==================================================
+-- BUTTON CREATOR
+--==================================================
+
+local function createControl(name, y, icon, label, key)
 	local button = Instance.new("TextButton")
 	button.Name = name
-	button.Size = UDim2.new(1, -30, 0, 48)
-	button.Position = UDim2.fromOffset(15, yPosition)
-	button.BackgroundColor3 = Color3.fromRGB(35, 38, 50)
+	button.Size = UDim2.new(1, -36, 0, 65)
+	button.Position = UDim2.fromOffset(18, y)
+	button.BackgroundColor3 = BUTTON
 	button.BorderSizePixel = 0
-	button.Text = text
-	button.TextColor3 = Color3.fromRGB(230, 230, 235)
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 15
+	button.Text = ""
 	button.AutoButtonColor = false
-	button.Parent = frame
+	button.Parent = main
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 11)
+	corner.CornerRadius = UDim.new(0, 13)
 	corner.Parent = button
 
-	local buttonStroke = Instance.new("UIStroke")
-	buttonStroke.Color = Color3.fromRGB(70, 75, 95)
-	buttonStroke.Thickness = 1
-	buttonStroke.Transparency = 0.4
-	buttonStroke.Parent = button
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(60, 67, 85)
+	stroke.Thickness = 1
+	stroke.Transparency = 0.35
+	stroke.Parent = button
 
-	return button
+	-- Icon
+	local iconLabel = Instance.new("TextLabel")
+	iconLabel.Size = UDim2.fromOffset(42, 42)
+	iconLabel.Position = UDim2.fromOffset(10, 11)
+	iconLabel.BackgroundColor3 = Color3.fromRGB(38, 43, 57)
+	iconLabel.BorderSizePixel = 0
+	iconLabel.Text = icon
+	iconLabel.TextSize = 20
+	iconLabel.Font = Enum.Font.GothamBold
+	iconLabel.Parent = button
+
+	local iconCorner = Instance.new("UICorner")
+	iconCorner.CornerRadius = UDim.new(0, 10)
+	iconCorner.Parent = iconLabel
+
+	-- Label
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(1, -145, 0, 22)
+	nameLabel.Position = UDim2.fromOffset(62, 11)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = label
+	nameLabel.TextColor3 = TEXT
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = 14
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Parent = button
+
+	-- Keybind
+	local keyLabel = Instance.new("TextLabel")
+	keyLabel.Size = UDim2.fromOffset(32, 18)
+	keyLabel.Position = UDim2.fromOffset(62, 34)
+	keyLabel.BackgroundTransparency = 1
+	keyLabel.Text = key
+	keyLabel.TextColor3 = SUBTEXT
+	keyLabel.Font = Enum.Font.GothamMedium
+	keyLabel.TextSize = 10
+	keyLabel.TextXAlignment = Enum.TextXAlignment.Left
+	keyLabel.Parent = button
+
+	-- Toggle background
+	local toggle = Instance.new("Frame")
+	toggle.Size = UDim2.fromOffset(46, 24)
+	toggle.Position = UDim2.new(1, -60, 0.5, -12)
+	toggle.BackgroundColor3 = Color3.fromRGB(45, 49, 62)
+	toggle.BorderSizePixel = 0
+	toggle.Parent = button
+
+	local toggleCorner = Instance.new("UICorner")
+	toggleCorner.CornerRadius = UDim.new(1, 0)
+	toggleCorner.Parent = toggle
+
+	-- Toggle circle
+	local circle = Instance.new("Frame")
+	circle.Size = UDim2.fromOffset(18, 18)
+	circle.Position = UDim2.fromOffset(3, 3)
+	circle.BackgroundColor3 = Color3.fromRGB(175, 180, 195)
+	circle.BorderSizePixel = 0
+	circle.Parent = toggle
+
+	local circleCorner = Instance.new("UICorner")
+	circleCorner.CornerRadius = UDim.new(1, 0)
+	circleCorner.Parent = circle
+
+	return button, toggle, circle, iconLabel
 end
 
---// Noclip button
-local noclipButton = createButton(
-	"NoclipButton",
-	"🧱  Noclip: OFF",
-	70
-)
+--==================================================
+-- CONTROLS
+--==================================================
 
---// Infinite Jump button
-local jumpButton = createButton(
-	"InfiniteJumpButton",
-	"🪽  Infinite Jump: OFF",
-	128
-)
+local noclipButton, noclipToggle, noclipCircle, noclipIcon =
+	createControl(
+		"NoclipControl",
+		110,
+		"◈",
+		"Noclip",
+		"N"
+	)
 
---// Character functions
-local function getCharacter()
-	return player.Character
+local jumpButton, jumpToggle, jumpCircle, jumpIcon =
+	createControl(
+		"InfiniteJumpControl",
+		183,
+		"↟",
+		"Infinite Jump",
+		"J"
+	)
+
+--==================================================
+-- TOGGLE ANIMATION
+--==================================================
+
+local function updateToggle(toggle, circle, icon, enabled, color)
+	local targetToggleColor
+	local targetCirclePosition
+
+	if enabled then
+		targetToggleColor = color
+		targetCirclePosition = UDim2.fromOffset(25, 3)
+	else
+		targetToggleColor = Color3.fromRGB(45, 49, 62)
+		targetCirclePosition = UDim2.fromOffset(3, 3)
+	end
+
+	TweenService:Create(
+		toggle,
+		TWEEN_INFO,
+		{BackgroundColor3 = targetToggleColor}
+	):Play()
+
+	TweenService:Create(
+		circle,
+		TWEEN_INFO,
+		{Position = targetCirclePosition}
+	):Play()
+
+	TweenService:Create(
+		icon,
+		TWEEN_INFO,
+		{
+			BackgroundColor3 = enabled
+				and Color3.fromRGB(35, 60, 55)
+				or Color3.fromRGB(38, 43, 57)
+		}
+	):Play()
 end
+
+--==================================================
+-- COLLISION
+--==================================================
 
 local function setCollision(character, state)
 	if not character then
@@ -116,67 +346,91 @@ local function setCollision(character, state)
 	end
 end
 
---// Update Noclip
-local function updateNoclip()
-	if noclipEnabled then
-		noclipButton.Text = "🧱  Noclip: ON"
-		noclipButton.BackgroundColor3 = Color3.fromRGB(35, 170, 95)
+--==================================================
+-- STATUS UPDATE
+--==================================================
 
-		local character = getCharacter()
-		if character then
-			setCollision(character, false)
-		end
+local function updateStatus()
+	if noclipEnabled and infiniteJumpEnabled then
+		statusText.Text = "BOTH SYSTEMS ACTIVE"
+	elseif noclipEnabled then
+		statusText.Text = "NOCLIP ACTIVE"
+	elseif infiniteJumpEnabled then
+		statusText.Text = "INFINITE JUMP ACTIVE"
 	else
-		noclipButton.Text = "🧱  Noclip: OFF"
-		noclipButton.BackgroundColor3 = Color3.fromRGB(35, 38, 50)
-
-		local character = getCharacter()
-		if character then
-			setCollision(character, true)
-		end
+		statusText.Text = "SYSTEM READY"
 	end
 end
 
---// Toggle Noclip
+--==================================================
+-- NOCLIP
+--==================================================
+
 local function toggleNoclip()
 	noclipEnabled = not noclipEnabled
+
+	updateToggle(
+		noclipToggle,
+		noclipCircle,
+		noclipIcon,
+		noclipEnabled,
+		GREEN
+	)
 
 	if noclipConnection then
 		noclipConnection:Disconnect()
 		noclipConnection = nil
 	end
 
-	if noclipEnabled then
-		noclipConnection = RunService.Heartbeat:Connect(function()
-			local character = getCharacter()
+	local character = player.Character
 
-			if character then
-				setCollision(character, false)
+	if noclipEnabled then
+
+		if character then
+			setCollision(character, false)
+		end
+
+		noclipConnection = RunService.Heartbeat:Connect(function()
+			local currentCharacter = player.Character
+
+			if currentCharacter then
+				setCollision(currentCharacter, false)
 			end
 		end)
-	end
 
-	updateNoclip()
-end
-
---// Update Infinite Jump
-local function updateInfiniteJump()
-	if infiniteJumpEnabled then
-		jumpButton.Text = "🪽  Infinite Jump: ON"
-		jumpButton.BackgroundColor3 = Color3.fromRGB(60, 130, 220)
 	else
-		jumpButton.Text = "🪽  Infinite Jump: OFF"
-		jumpButton.BackgroundColor3 = Color3.fromRGB(35, 38, 50)
+
+		if character then
+			setCollision(character, true)
+		end
+
 	end
+
+	updateStatus()
 end
 
---// Toggle Infinite Jump
+--==================================================
+-- INFINITE JUMP
+--==================================================
+
 local function toggleInfiniteJump()
 	infiniteJumpEnabled = not infiniteJumpEnabled
-	updateInfiniteJump()
+
+	updateToggle(
+		jumpToggle,
+		jumpCircle,
+		jumpIcon,
+		infiniteJumpEnabled,
+		BLUE
+	)
+
+	updateStatus()
 end
 
---// Button connections
+--==================================================
+-- BUTTON EVENTS
+--==================================================
+
 noclipButton.MouseButton1Click:Connect(function()
 	toggleNoclip()
 end)
@@ -185,13 +439,49 @@ jumpButton.MouseButton1Click:Connect(function()
 	toggleInfiniteJump()
 end)
 
---// Infinite Jump
+--==================================================
+-- BUTTON HOVER EFFECT
+--==================================================
+
+local function addHover(button)
+	local original = button.BackgroundColor3
+
+	button.MouseEnter:Connect(function()
+		TweenService:Create(
+			button,
+			TWEEN_INFO,
+			{
+				BackgroundColor3 = Color3.fromRGB(38, 43, 57)
+			}
+		):Play()
+	end)
+
+	button.MouseLeave:Connect(function()
+		TweenService:Create(
+			button,
+			TWEEN_INFO,
+			{
+				BackgroundColor3 = original
+			}
+		):Play()
+	end)
+end
+
+addHover(noclipButton)
+addHover(jumpButton)
+
+--==================================================
+-- INFINITE JUMP
+--==================================================
+
 UserInputService.JumpRequest:Connect(function()
+
 	if not infiniteJumpEnabled then
 		return
 	end
 
-	local character = getCharacter()
+	local character = player.Character
+
 	if not character then
 		return
 	end
@@ -203,32 +493,156 @@ UserInputService.JumpRequest:Connect(function()
 	end
 end)
 
---// Character respawn
+--==================================================
+-- RESPAWN
+--==================================================
+
 player.CharacterAdded:Connect(function(character)
-	task.wait(0.2)
+
+	task.wait(0.25)
 
 	if noclipEnabled then
 		setCollision(character, false)
 	end
+
 end)
 
---// Keyboard shortcuts
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then
+--==================================================
+-- KEYBINDS
+--==================================================
+
+UserInputService.InputBegan:Connect(function(input, processed)
+
+	if processed then
 		return
 	end
 
-	-- N = Noclip
 	if input.KeyCode == Enum.KeyCode.N then
 		toggleNoclip()
+
+	elseif input.KeyCode == Enum.KeyCode.J then
+		toggleInfiniteJump()
+
 	end
 
-	-- J = Infinite Jump
-	if input.KeyCode == Enum.KeyCode.J then
-		toggleInfiniteJump()
-	end
 end)
 
---// Start OFF
-updateNoclip()
-updateInfiniteJump()
+--==================================================
+-- MINIMIZE
+--==================================================
+
+minimize.MouseButton1Click:Connect(function()
+
+	minimized = not minimized
+
+	if minimized then
+
+		TweenService:Create(
+			main,
+			TweenInfo.new(
+				0.3,
+				Enum.EasingStyle.Quint,
+				Enum.EasingDirection.Out
+			),
+			{
+				Size = UDim2.fromOffset(340, 65)
+			}
+		):Play()
+
+		minimize.Text = "+"
+
+	else
+
+		TweenService:Create(
+			main,
+			TweenInfo.new(
+				0.3,
+				Enum.EasingStyle.Quint,
+				Enum.EasingDirection.Out
+			),
+			{
+				Size = UDim2.fromOffset(340, 280)
+			}
+		):Play()
+
+		minimize.Text = "−"
+
+	end
+
+end)
+
+--==================================================
+-- DRAGGING
+--==================================================
+
+local dragging = false
+local dragStart
+local startPosition
+
+header.InputBegan:Connect(function(input)
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		dragging = true
+		dragStart = input.Position
+		startPosition = main.Position
+
+	end
+
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+	if not dragging then
+		return
+	end
+
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		local delta = input.Position - dragStart
+
+		main.Position = UDim2.new(
+			startPosition.X.Scale,
+			startPosition.X.Offset + delta.X,
+			startPosition.Y.Scale,
+			startPosition.Y.Offset + delta.Y
+		)
+
+	end
+
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		dragging = false
+
+	end
+
+end)
+
+--==================================================
+-- START STATE
+--==================================================
+
+updateToggle(
+	noclipToggle,
+	noclipCircle,
+	noclipIcon,
+	false,
+	GREEN
+)
+
+updateToggle(
+	jumpToggle,
+	jumpCircle,
+	jumpIcon,
+	false,
+	BLUE
+)
+
+updateStatus()
